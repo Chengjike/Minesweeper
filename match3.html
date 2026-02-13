@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>程芷琪的消消乐</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .game-area {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border: 4px solid #667eea;
+            border-radius: 10px;
+            background: #f5f5f5;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 200px;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .info-box h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .score-value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .game-over-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .game-over-modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .modal-content h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+
+        .modal-content p {
+            font-size: 20px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .hint {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>程芷琪的消消乐</h1>
+        <div class="game-area">
+            <canvas id="gameCanvas" width="480" height="480"></canvas>
+            <div class="side-panel">
+                <div class="info-box">
+                    <h3>分数</h3>
+                    <div class="score-value" id="score">0</div>
+                </div>
+                <div class="info-box">
+                    <h3>剩余步数</h3>
+                    <div class="score-value" id="moves">30</div>
+                </div>
+                <div class="info-box">
+                    <h3>目标分数</h3>
+                    <div class="score-value">1000</div>
+                </div>
+                <button onclick="resetGame()">重新开始</button>
+                <div class="hint">
+                    点击两个相邻的方块进行交换，连成3个或更多相同颜色即可消除！
+                </div>
+            </div>
+        </div>
+        <a href="index.html" class="back-link">← 返回游戏中心</a>
+    </div>
+
+    <div class="game-over-modal" id="gameOverModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">游戏结束</h2>
+            <p id="modalMessage">最终分数: <span id="finalScore">0</span></p>
+            <button onclick="resetGame()">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const GRID_SIZE = 8;
+        const CELL_SIZE = 60;
+        // 色弱友好的颜色：避免红绿组合，使用高对比度颜色
+        const COLORS = [
+            '#FF6B9D', // 粉红 - 圆形
+            '#4A90E2', // 蓝色 - 正方形
+            '#F5A623', // 橙色 - 三角形
+            '#9013FE', // 紫色 - 五角星
+            '#50E3C2', // 青色 - 菱形
+            '#FFD700'  // 金黄 - 六边形
+        ];
+        const TARGET_SCORE = 1000;
+        const INITIAL_MOVES = 30;
+
+        let grid = [];
+        let score = 0;
+        let moves = INITIAL_MOVES;
+        let selectedCell = null;
+        let isAnimating = false;
+
+        // 音效系统
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playClickSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function playMatchSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+            oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+            oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        function initGame() {
+            grid = [];
+            for (let row = 0; row < GRID_SIZE; row++) {
+                grid[row] = [];
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    grid[row][col] = Math.floor(Math.random() * COLORS.length);
+                }
+            }
+
+            // 确保初始状态没有匹配
+            while (findMatches().length > 0) {
+                for (let row = 0; row < GRID_SIZE; row++) {
+                    for (let col = 0; col < GRID_SIZE; col++) {
+                        grid[row][col] = Math.floor(Math.random() * COLORS.length);
+                    }
+                }
+            }
+        }
+
+        function drawShape(ctx, centerX, centerY, radius, shapeIndex) {
+            const size = radius * 1.2;
+
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 4;
+
+            switch(shapeIndex) {
+                case 0: // 圆形
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, size, 0, Math.PI * 2);
+                    ctx.stroke();
+                    break;
+
+                case 1: // 正方形
+                    ctx.strokeRect(centerX - size, centerY - size, size * 2, size * 2);
+                    break;
+
+                case 2: // 三角形（正三角形）
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY - size * 1.2);
+                    ctx.lineTo(centerX - size * 1.1, centerY + size * 0.6);
+                    ctx.lineTo(centerX + size * 1.1, centerY + size * 0.6);
+                    ctx.closePath();
+                    ctx.stroke();
+                    break;
+
+                case 3: // 五角星
+                    ctx.beginPath();
+                    for (let i = 0; i < 5; i++) {
+                        const angle = (i * 4 * Math.PI / 5) - Math.PI / 2;
+                        const x = centerX + Math.cos(angle) * size * 1.2;
+                        const y = centerY + Math.sin(angle) * size * 1.2;
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                    break;
+
+                case 4: // 菱形
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY - size * 1.3);
+                    ctx.lineTo(centerX + size * 0.9, centerY);
+                    ctx.lineTo(centerX, centerY + size * 1.3);
+                    ctx.lineTo(centerX - size * 0.9, centerY);
+                    ctx.closePath();
+                    ctx.stroke();
+                    break;
+
+                case 5: // 六边形
+                    ctx.beginPath();
+                    for (let i = 0; i < 6; i++) {
+                        const angle = (i * Math.PI / 3) - Math.PI / 2;
+                        const x = centerX + Math.cos(angle) * size * 1.1;
+                        const y = centerY + Math.sin(angle) * size * 1.1;
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                    break;
+            }
+        }
+
+        function drawGem(x, y, colorIndex, selected = false) {
+            const px = x * CELL_SIZE;
+            const py = y * CELL_SIZE;
+            const size = CELL_SIZE - 8;
+            const centerX = px + CELL_SIZE / 2;
+            const centerY = py + CELL_SIZE / 2;
+            const radius = size / 2 - 2;
+
+            // 选中效果
+            if (selected) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(px + 2, py + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            }
+
+            // 绘制圆形宝石背景
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+
+            // 主体渐变
+            const gradient = ctx.createRadialGradient(
+                centerX - radius * 0.3, centerY - radius * 0.3, 0,
+                centerX, centerY, radius
+            );
+            gradient.addColorStop(0, lightenColor(COLORS[colorIndex], 40));
+            gradient.addColorStop(0.7, COLORS[colorIndex]);
+            gradient.addColorStop(1, darkenColor(COLORS[colorIndex], 30));
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 高光
+            const highlightGradient = ctx.createRadialGradient(
+                centerX - radius * 0.4, centerY - radius * 0.4, 0,
+                centerX - radius * 0.4, centerY - radius * 0.4, radius * 0.6
+            );
+            highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+            highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+            ctx.fillStyle = highlightGradient;
+            ctx.beginPath();
+            ctx.arc(centerX - radius * 0.3, centerY - radius * 0.3, radius * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            // 外边框
+            ctx.strokeStyle = darkenColor(COLORS[colorIndex], 40);
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 内边框高光
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius - 2, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 绘制几何图形
+            drawShape(ctx, centerX, centerY, radius * 0.5, colorIndex);
+        }
+
+        function lightenColor(color, percent) {
+            const num = parseInt(color.replace("#",""), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.min(255, (num >> 16) + amt);
+            const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
+            const B = Math.min(255, (num & 0x0000FF) + amt);
+            return "#" + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+        }
+
+        function darkenColor(color, percent) {
+            const num = parseInt(color.replace("#",""), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.max(0, (num >> 16) - amt);
+            const G = Math.max(0, (num >> 8 & 0x00FF) - amt);
+            const B = Math.max(0, (num & 0x0000FF) - amt);
+            return "#" + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+        }
+
+        function drawGrid() {
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 绘制网格线
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= GRID_SIZE; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * CELL_SIZE, 0);
+                ctx.lineTo(i * CELL_SIZE, canvas.height);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i * CELL_SIZE);
+                ctx.lineTo(canvas.width, i * CELL_SIZE);
+                ctx.stroke();
+            }
+
+            // 绘制宝石
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    if (grid[row][col] !== null) {
+                        const isSelected = selectedCell &&
+                            selectedCell.row === row &&
+                            selectedCell.col === col;
+                        drawGem(col, row, grid[row][col], isSelected);
+                    }
+                }
+            }
+        }
+
+        function findMatches() {
+            const matches = [];
+
+            // 检查横向匹配
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE - 2; col++) {
+                    const color = grid[row][col];
+                    if (color === null) continue;
+
+                    let matchLength = 1;
+                    while (col + matchLength < GRID_SIZE &&
+                           grid[row][col + matchLength] === color) {
+                        matchLength++;
+                    }
+
+                    if (matchLength >= 3) {
+                        for (let i = 0; i < matchLength; i++) {
+                            matches.push({ row, col: col + i });
+                        }
+                        col += matchLength - 1;
+                    }
+                }
+            }
+
+            // 检查纵向匹配
+            for (let col = 0; col < GRID_SIZE; col++) {
+                for (let row = 0; row < GRID_SIZE - 2; row++) {
+                    const color = grid[row][col];
+                    if (color === null) continue;
+
+                    let matchLength = 1;
+                    while (row + matchLength < GRID_SIZE &&
+                           grid[row + matchLength][col] === color) {
+                        matchLength++;
+                    }
+
+                    if (matchLength >= 3) {
+                        for (let i = 0; i < matchLength; i++) {
+                            matches.push({ row: row + i, col });
+                        }
+                        row += matchLength - 1;
+                    }
+                }
+            }
+
+            // 去重
+            const uniqueMatches = [];
+            const seen = new Set();
+            for (const match of matches) {
+                const key = `${match.row},${match.col}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueMatches.push(match);
+                }
+            }
+
+            return uniqueMatches;
+        }
+
+        function removeMatches(matches) {
+            for (const match of matches) {
+                grid[match.row][match.col] = null;
+            }
+            score += matches.length * 10;
+            updateScore();
+            playMatchSound();
+        }
+
+        function dropGems() {
+            for (let col = 0; col < GRID_SIZE; col++) {
+                let emptyRow = GRID_SIZE - 1;
+                for (let row = GRID_SIZE - 1; row >= 0; row--) {
+                    if (grid[row][col] !== null) {
+                        if (row !== emptyRow) {
+                            grid[emptyRow][col] = grid[row][col];
+                            grid[row][col] = null;
+                        }
+                        emptyRow--;
+                    }
+                }
+            }
+        }
+
+        function fillEmpty() {
+            for (let row = 0; row < GRID_SIZE; row++) {
+                for (let col = 0; col < GRID_SIZE; col++) {
+                    if (grid[row][col] === null) {
+                        grid[row][col] = Math.floor(Math.random() * COLORS.length);
+                    }
+                }
+            }
+        }
+
+        async function processMatches() {
+            isAnimating = true;
+            let hasMatches = true;
+
+            while (hasMatches) {
+                const matches = findMatches();
+                if (matches.length === 0) {
+                    hasMatches = false;
+                    break;
+                }
+
+                removeMatches(matches);
+                drawGrid();
+                await sleep(300);
+
+                dropGems();
+                drawGrid();
+                await sleep(300);
+
+                fillEmpty();
+                drawGrid();
+                await sleep(300);
+            }
+
+            isAnimating = false;
+            checkGameOver();
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function isAdjacent(cell1, cell2) {
+            const rowDiff = Math.abs(cell1.row - cell2.row);
+            const colDiff = Math.abs(cell1.col - cell2.col);
+            return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+        }
+
+        function swapGems(cell1, cell2) {
+            const temp = grid[cell1.row][cell1.col];
+            grid[cell1.row][cell1.col] = grid[cell2.row][cell2.col];
+            grid[cell2.row][cell2.col] = temp;
+        }
+
+        async function handleSwap(cell1, cell2) {
+            swapGems(cell1, cell2);
+            drawGrid();
+            await sleep(200);
+
+            const matches = findMatches();
+            if (matches.length > 0) {
+                moves--;
+                updateMoves();
+                await processMatches();
+            } else {
+                // 无效交换，换回来
+                swapGems(cell1, cell2);
+                drawGrid();
+            }
+
+            selectedCell = null;
+        }
+
+        canvas.addEventListener('click', async (e) => {
+            if (isAnimating) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const col = Math.floor(x / CELL_SIZE);
+            const row = Math.floor(y / CELL_SIZE);
+
+            if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return;
+
+            playClickSound();
+
+            if (!selectedCell) {
+                selectedCell = { row, col };
+                drawGrid();
+            } else {
+                if (selectedCell.row === row && selectedCell.col === col) {
+                    selectedCell = null;
+                    drawGrid();
+                } else if (isAdjacent(selectedCell, { row, col })) {
+                    await handleSwap(selectedCell, { row, col });
+                } else {
+                    selectedCell = { row, col };
+                    drawGrid();
+                }
+            }
+        });
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function updateMoves() {
+            document.getElementById('moves').textContent = moves;
+        }
+
+        function checkGameOver() {
+            if (score >= TARGET_SCORE) {
+                showGameOver('恭喜过关！', `你用 ${INITIAL_MOVES - moves} 步达到了目标分数！`);
+            } else if (moves <= 0) {
+                showGameOver('游戏结束', `差一点就成功了！再试一次吧！`);
+            }
+        }
+
+        function showGameOver(title, message) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').innerHTML = message + '<br>最终分数: <span id="finalScore">' + score + '</span>';
+            document.getElementById('gameOverModal').classList.add('show');
+        }
+
+        function resetGame() {
+            document.getElementById('gameOverModal').classList.remove('show');
+            score = 0;
+            moves = INITIAL_MOVES;
+            selectedCell = null;
+            isAnimating = false;
+            updateScore();
+            updateMoves();
+            initGame();
+            drawGrid();
+        }
+
+        initGame();
+        drawGrid();
+    </script>
+</body>
+</html>
