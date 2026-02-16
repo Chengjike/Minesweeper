@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>程芷琪的扫雷</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #2c3e50;
+        }
+
+        .container {
+            text-align: center;
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #34495e;
+            margin-bottom: 15px;
+        }
+
+        .info {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .board {
+            display: inline-grid;
+            grid-template-columns: repeat(9, 35px);
+            grid-gap: 2px;
+            background: #95a5a6;
+            padding: 2px;
+            border-radius: 5px;
+        }
+
+        .cell {
+            width: 35px;
+            height: 35px;
+            background: #bdc3c7;
+            border: 2px outset #ecf0f1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            user-select: none;
+        }
+
+        .cell:hover:not(.revealed):not(.flagged) {
+            background: #d5dbdb;
+        }
+
+        .cell.revealed {
+            background: #ecf0f1;
+            border: 1px solid #95a5a6;
+            cursor: default;
+        }
+
+        .cell.mine {
+            background: #e74c3c;
+        }
+
+        .cell.flagged {
+            background: #f39c12;
+        }
+
+        .cell.flagged::after {
+            content: '🚩';
+        }
+
+        .cell.mine.revealed::after {
+            content: '💣';
+        }
+
+        .cell.revealed[data-count="1"] { color: #3498db; }
+        .cell.revealed[data-count="2"] { color: #27ae60; }
+        .cell.revealed[data-count="3"] { color: #e74c3c; }
+        .cell.revealed[data-count="4"] { color: #8e44ad; }
+        .cell.revealed[data-count="5"] { color: #d35400; }
+        .cell.revealed[data-count="6"] { color: #16a085; }
+        .cell.revealed[data-count="7"] { color: #2c3e50; }
+        .cell.revealed[data-count="8"] { color: #7f8c8d; }
+
+        button {
+            margin-top: 15px;
+            padding: 10px 30px;
+            font-size: 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            min-height: 25px;
+        }
+
+        .status.win {
+            color: #27ae60;
+        }
+
+        .status.lose {
+            color: #e74c3c;
+        }
+
+        .difficulty {
+            margin-bottom: 15px;
+        }
+
+        .difficulty button {
+            margin: 0 5px;
+            padding: 8px 20px;
+        }
+
+        .difficulty button.active {
+            background: #27ae60;
+        }
+
+        .difficulty button.active:hover {
+            background: #229954;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>程芷琪的扫雷</h1>
+        <div class="difficulty">
+            <button class="active" onclick="setDifficulty('easy')">简单</button>
+            <button onclick="setDifficulty('medium')">中等</button>
+            <button onclick="setDifficulty('hard')">高级</button>
+        </div>
+        <div class="info">
+            <div>剩余雷数: <span id="mineCount">10</span></div>
+        </div>
+        <div class="board" id="board"></div>
+        <button onclick="resetGame()">重新开始</button>
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const DIFFICULTY_SETTINGS = {
+            easy: { rows: 9, cols: 9, mines: 10 },
+            medium: { rows: 16, cols: 16, mines: 40 },
+            hard: { rows: 16, cols: 30, mines: 99 }
+        };
+
+        let currentDifficulty = 'easy';
+        let ROWS = 9;
+        let COLS = 9;
+        let MINES = 10;
+
+        let board = [];
+        let revealed = [];
+        let flagged = [];
+        let gameOver = false;
+        let minePositions = [];
+
+        function setDifficulty(difficulty) {
+            currentDifficulty = difficulty;
+            const settings = DIFFICULTY_SETTINGS[difficulty];
+            ROWS = settings.rows;
+            COLS = settings.cols;
+            MINES = settings.mines;
+
+            document.querySelectorAll('.difficulty button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            initGame();
+        }
+
+        function initGame() {
+            board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            revealed = Array(ROWS).fill().map(() => Array(COLS).fill(false));
+            flagged = Array(ROWS).fill().map(() => Array(COLS).fill(false));
+            gameOver = false;
+            minePositions = [];
+
+            placeMines();
+            calculateNumbers();
+            renderBoard();
+            updateMineCount();
+            document.getElementById('status').textContent = '';
+            document.getElementById('status').className = 'status';
+        }
+
+        function placeMines() {
+            let placed = 0;
+            while (placed < MINES) {
+                const row = Math.floor(Math.random() * ROWS);
+                const col = Math.floor(Math.random() * COLS);
+                if (board[row][col] !== -1) {
+                    board[row][col] = -1;
+                    minePositions.push([row, col]);
+                    placed++;
+                }
+            }
+        }
+
+        function calculateNumbers() {
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (board[row][col] === -1) continue;
+                    let count = 0;
+                    for (let dr = -1; dr <= 1; dr++) {
+                        for (let dc = -1; dc <= 1; dc++) {
+                            const nr = row + dr;
+                            const nc = col + dc;
+                            if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === -1) {
+                                count++;
+                            }
+                        }
+                    }
+                    board[row][col] = count;
+                }
+            }
+        }
+
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            boardEl.style.gridTemplateColumns = `repeat(${COLS}, 35px)`;
+
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+
+                    if (revealed[row][col]) {
+                        cell.classList.add('revealed');
+                        if (board[row][col] === -1) {
+                            cell.classList.add('mine');
+                        } else if (board[row][col] > 0) {
+                            cell.textContent = board[row][col];
+                            cell.dataset.count = board[row][col];
+                        }
+                    } else if (flagged[row][col]) {
+                        cell.classList.add('flagged');
+                    }
+
+                    cell.addEventListener('click', () => handleClick(row, col));
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        handleRightClick(row, col);
+                    });
+
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function handleClick(row, col) {
+            if (gameOver || revealed[row][col] || flagged[row][col]) return;
+
+            revealed[row][col] = true;
+
+            if (board[row][col] === -1) {
+                gameOver = true;
+                revealAllMines();
+                document.getElementById('status').textContent = '游戏结束！你踩到雷了！';
+                document.getElementById('status').className = 'status lose';
+            } else {
+                if (board[row][col] === 0) {
+                    revealAdjacent(row, col);
+                }
+                checkWin();
+            }
+
+            renderBoard();
+        }
+
+        function handleRightClick(row, col) {
+            if (gameOver || revealed[row][col]) return;
+
+            flagged[row][col] = !flagged[row][col];
+            updateMineCount();
+            renderBoard();
+        }
+
+        function revealAdjacent(row, col) {
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const nr = row + dr;
+                    const nc = col + dc;
+                    if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && !revealed[nr][nc] && !flagged[nr][nc]) {
+                        revealed[nr][nc] = true;
+                        if (board[nr][nc] === 0) {
+                            revealAdjacent(nr, nc);
+                        }
+                    }
+                }
+            }
+        }
+
+        function revealAllMines() {
+            for (const [row, col] of minePositions) {
+                revealed[row][col] = true;
+            }
+        }
+
+        function checkWin() {
+            let revealedCount = 0;
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLS; col++) {
+                    if (revealed[row][col]) revealedCount++;
+                }
+            }
+
+            if (revealedCount === ROWS * COLS - MINES) {
+                gameOver = true;
+                document.getElementById('status').textContent = '恭喜你赢了！';
+                document.getElementById('status').className = 'status win';
+            }
+        }
+
+        function updateMineCount() {
+            const flagCount = flagged.flat().filter(f => f).length;
+            document.getElementById('mineCount').textContent = MINES - flagCount;
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>

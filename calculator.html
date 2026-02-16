@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科学计算器 - 程芷琪的游戏中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 25px;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .calculator {
+            background: #2d2d2d;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .display {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: right;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .display-previous {
+            color: #888;
+            font-size: 0.9em;
+            min-height: 20px;
+            margin-bottom: 5px;
+        }
+
+        .display-current {
+            color: white;
+            font-size: 2.5em;
+            font-weight: 300;
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+
+        .memory-indicator {
+            color: #4CAF50;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+
+        button {
+            padding: 20px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-number {
+            background: #505050;
+            color: white;
+        }
+
+        .btn-number:hover {
+            background: #606060;
+        }
+
+        .btn-operator {
+            background: #ff9500;
+            color: white;
+        }
+
+        .btn-operator:hover {
+            background: #ffb143;
+        }
+
+        .btn-function {
+            background: #3a3a3a;
+            color: #4fc3f7;
+            font-size: 1em;
+        }
+
+        .btn-function:hover {
+            background: #4a4a4a;
+        }
+
+        .btn-clear {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #ff5a4e;
+        }
+
+        .btn-equals {
+            background: #4CAF50;
+            color: white;
+            grid-column: span 2;
+        }
+
+        .btn-equals:hover {
+            background: #66bb6a;
+        }
+
+        .btn-zero {
+            grid-column: span 2;
+        }
+
+        .btn-memory {
+            background: #9c27b0;
+            color: white;
+            font-size: 0.9em;
+        }
+
+        .btn-memory:hover {
+            background: #ba68c8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔢 科学计算器</h1>
+        <a href="index.html" class="back-link">← 返回游戏中心</a>
+    </div>
+
+    <div class="calculator">
+        <div class="display">
+            <div class="display-previous" id="previousDisplay"></div>
+            <div class="display-current" id="currentDisplay">0</div>
+            <div class="memory-indicator" id="memoryIndicator"></div>
+        </div>
+
+        <div class="buttons">
+            <!-- 第一行：内存和清除 -->
+            <button class="btn-memory" data-action="mc">MC</button>
+            <button class="btn-memory" data-action="mr">MR</button>
+            <button class="btn-memory" data-action="ms">MS</button>
+            <button class="btn-memory" data-action="m+">M+</button>
+            <button class="btn-memory" data-action="m-">M-</button>
+
+            <!-- 第二行：科学函数 -->
+            <button class="btn-function" data-action="sin">sin</button>
+            <button class="btn-function" data-action="cos">cos</button>
+            <button class="btn-function" data-action="tan">tan</button>
+            <button class="btn-function" data-action="log">log</button>
+            <button class="btn-function" data-action="ln">ln</button>
+
+            <!-- 第三行：更多函数 -->
+            <button class="btn-function" data-action="square">x²</button>
+            <button class="btn-function" data-action="sqrt">√</button>
+            <button class="btn-function" data-action="reciprocal">1/x</button>
+            <button class="btn-function" data-action="factorial">n!</button>
+            <button class="btn-function" data-action="exp">eˣ</button>
+
+            <!-- 第四行 -->
+            <button class="btn-clear" data-action="clear">C</button>
+            <button class="btn-clear" data-action="ce">CE</button>
+            <button class="btn-function" data-action="backspace">⌫</button>
+            <button class="btn-function" data-action="percent">%</button>
+            <button class="btn-operator" data-action="divide">÷</button>
+
+            <!-- 第五行 -->
+            <button class="btn-number" data-number="7">7</button>
+            <button class="btn-number" data-number="8">8</button>
+            <button class="btn-number" data-number="9">9</button>
+            <button class="btn-function" data-action="sign">±</button>
+            <button class="btn-operator" data-action="multiply">×</button>
+
+            <!-- 第六行 -->
+            <button class="btn-number" data-number="4">4</button>
+            <button class="btn-number" data-number="5">5</button>
+            <button class="btn-number" data-number="6">6</button>
+            <button class="btn-function" data-action="pi">π</button>
+            <button class="btn-operator" data-action="subtract">-</button>
+
+            <!-- 第七行 -->
+            <button class="btn-number" data-number="1">1</button>
+            <button class="btn-number" data-number="2">2</button>
+            <button class="btn-number" data-number="3">3</button>
+            <button class="btn-function" data-action="e">e</button>
+            <button class="btn-operator" data-action="add">+</button>
+
+            <!-- 第八行 -->
+            <button class="btn-number btn-zero" data-number="0">0</button>
+            <button class="btn-number" data-action="decimal">.</button>
+            <button class="btn-equals" data-action="equals">=</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Calculator } from './src/calculator.js';
+
+        const calc = new Calculator();
+
+        function updateDisplay() {
+            const currentDisplay = document.getElementById('currentDisplay');
+            const previousDisplay = document.getElementById('previousDisplay');
+            const memoryIndicator = document.getElementById('memoryIndicator');
+
+            currentDisplay.textContent = calc.getDisplay();
+
+            if (calc.operation && calc.previousValue) {
+                previousDisplay.textContent = `${calc.previousValue} ${calc.operation}`;
+            } else {
+                previousDisplay.textContent = '';
+            }
+
+            if (calc.getMemory() !== 0) {
+                memoryIndicator.textContent = `M: ${calc.getMemory()}`;
+            } else {
+                memoryIndicator.textContent = '';
+            }
+        }
+
+        // 数字按钮
+        document.querySelectorAll('[data-number]').forEach(button => {
+            button.addEventListener('click', () => {
+                calc.inputNumber(button.dataset.number);
+                updateDisplay();
+            });
+        });
+
+        // 功能按钮
+        document.querySelectorAll('[data-action]').forEach(button => {
+            button.addEventListener('click', () => {
+                const action = button.dataset.action;
+
+                switch(action) {
+                    case 'clear':
+                        calc.clear();
+                        break;
+                    case 'ce':
+                        calc.clearEntry();
+                        break;
+                    case 'backspace':
+                        calc.backspace();
+                        break;
+                    case 'decimal':
+                        calc.inputDecimal();
+                        break;
+                    case 'equals':
+                        calc.calculate();
+                        break;
+                    case 'add':
+                        calc.setOperation('+');
+                        break;
+                    case 'subtract':
+                        calc.setOperation('-');
+                        break;
+                    case 'multiply':
+                        calc.setOperation('×');
+                        break;
+                    case 'divide':
+                        calc.setOperation('÷');
+                        break;
+                    case 'percent':
+                        calc.percentage();
+                        break;
+                    case 'sign':
+                        calc.toggleSign();
+                        break;
+                    case 'square':
+                        calc.square();
+                        break;
+                    case 'sqrt':
+                        calc.squareRoot();
+                        break;
+                    case 'reciprocal':
+                        calc.reciprocal();
+                        break;
+                    case 'sin':
+                        calc.sin();
+                        break;
+                    case 'cos':
+                        calc.cos();
+                        break;
+                    case 'tan':
+                        calc.tan();
+                        break;
+                    case 'log':
+                        calc.log();
+                        break;
+                    case 'ln':
+                        calc.ln();
+                        break;
+                    case 'exp':
+                        calc.exp();
+                        break;
+                    case 'factorial':
+                        calc.factorial();
+                        break;
+                    case 'pi':
+                        calc.currentValue = String(Math.PI);
+                        calc.shouldResetScreen = true;
+                        break;
+                    case 'e':
+                        calc.currentValue = String(Math.E);
+                        calc.shouldResetScreen = true;
+                        break;
+                    case 'mc':
+                        calc.memoryClear();
+                        break;
+                    case 'mr':
+                        calc.memoryRecall();
+                        break;
+                    case 'ms':
+                        calc.memoryStore();
+                        break;
+                    case 'm+':
+                        calc.memoryAdd();
+                        break;
+                    case 'm-':
+                        calc.memorySubtract();
+                        break;
+                }
+
+                updateDisplay();
+            });
+        });
+
+        // 键盘支持
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') {
+                calc.inputNumber(e.key);
+                updateDisplay();
+            } else if (e.key === '.') {
+                calc.inputDecimal();
+                updateDisplay();
+            } else if (e.key === '+') {
+                calc.setOperation('+');
+                updateDisplay();
+            } else if (e.key === '-') {
+                calc.setOperation('-');
+                updateDisplay();
+            } else if (e.key === '*') {
+                calc.setOperation('×');
+                updateDisplay();
+            } else if (e.key === '/') {
+                e.preventDefault();
+                calc.setOperation('÷');
+                updateDisplay();
+            } else if (e.key === 'Enter' || e.key === '=') {
+                e.preventDefault();
+                calc.calculate();
+                updateDisplay();
+            } else if (e.key === 'Escape') {
+                calc.clear();
+                updateDisplay();
+            } else if (e.key === 'Backspace') {
+                calc.backspace();
+                updateDisplay();
+            }
+        });
+    </script>
+</body>
+</html>

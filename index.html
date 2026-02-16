@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>程芷琪的游戏中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 36px;
+        }
+
+        .games {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .game-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            border-radius: 15px;
+            text-decoration: none;
+            color: white;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .game-card h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .game-card p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .game-card:nth-child(1) {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .game-card:nth-child(2) {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .game-card:nth-child(3) {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .game-card:nth-child(4) {
+            background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>程芷琪的游戏中心</h1>
+        <div class="games">
+            <a href="minesweeper.html" class="game-card">
+                <h2>💣 扫雷</h2>
+                <p>经典扫雷游戏，三种难度可选</p>
+            </a>
+            <a href="tetris.html" class="game-card">
+                <h2>🎮 俄罗斯方块</h2>
+                <p>经典俄罗斯方块，挑战高分</p>
+            </a>
+            <a href="match3.html" class="game-card">
+                <h2>💎 消消乐</h2>
+                <p>三消益智游戏，达到目标分数过关</p>
+            </a>
+            <a href="calculator.html" class="game-card">
+                <h2>🔢 科学计算器</h2>
+                <p>功能完整的科学计算器，支持三角函数和内存操作</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>
